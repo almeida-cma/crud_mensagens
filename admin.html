@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Mensagens</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <style>
+        body {
+            padding: 20px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1 class="my-4">Admin - Mensagens</h1>
+
+    <!-- Formulário para adicionar mensagem -->
+    <div class="mb-4">
+        <h2>Adicionar Mensagem</h2>
+        <form id="addForm">
+            <div class="form-group">
+                <label for="nome">Nome:</label>
+                <input type="text" class="form-control" id="nome" required>
+            </div>
+            <div class="form-group">
+                <label for="email">Email:</label>
+                <input type="email" class="form-control" id="email" required>
+            </div>
+            <div class="form-group">
+                <label for="mensagem">Mensagem:</label>
+                <textarea class="form-control" id="mensagem" rows="3" required></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary">Adicionar Mensagem</button>
+        </form>
+    </div>
+
+    <!-- Tabela para exibir mensagens existentes -->
+    <h2>Mensagens Existentes</h2>
+    <table class="table">
+        <thead>
+        <tr>
+            <th>ID</th>
+            <th>Nome</th>
+            <th>Email</th>
+            <th>Mensagem</th>
+            <th>Ações</th>
+        </tr>
+        </thead>
+        <tbody id="mensagemTableBody">
+        <!-- As mensagens serão exibidas aqui -->
+        </tbody>
+    </table>
+</div>
+
+<!-- Scripts -->
+<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.1/dist/umd/popper.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+<script>
+    // Função para carregar as mensagens existentes na tabela
+    function loadMessages() {
+        fetch('/mensagens')
+            .then(response => response.json())
+            .then(data => {
+                const tableBody = document.getElementById('mensagemTableBody');
+                tableBody.innerHTML = '';
+
+                data.mensagens.forEach(mensagem => {
+                    const row = `<tr>
+                                    <td>${mensagem.id}</td>
+                                    <td>${mensagem.nome}</td>
+                                    <td>${mensagem.email}</td>
+                                    <td>${mensagem.mensagem}</td>
+                                    <td>
+                                        <button class="btn btn-warning btn-sm" onclick="editMessage(${mensagem.id},'${mensagem.nome}','${mensagem.email}','${mensagem.mensagem}')">Editar</button>
+                                        <button class="btn btn-danger btn-sm" onclick="deleteMessage(${mensagem.id})">Excluir</button>
+                                    </td>
+                                </tr>`;
+                    tableBody.innerHTML += row;
+                });
+            })
+            .catch(error => console.error('Erro ao carregar mensagens:', error));
+    }
+
+    // Função para adicionar uma nova mensagem
+    document.getElementById('addForm').addEventListener('submit', function (event) {
+        event.preventDefault();
+
+        const nome = document.getElementById('nome').value;
+        const email = document.getElementById('email').value;
+        const mensagem = document.getElementById('mensagem').value;
+
+        fetch('/mensagens', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ nome, email, mensagem }),
+        })
+            .then(response => response.json())
+            .then(data => {
+                console.log('Mensagem adicionada:', data);
+                loadMessages();
+            })
+            .catch(error => console.error('Erro ao adicionar mensagem:', error));
+
+        // Limpar o formulário
+        this.reset();
+    });
+
+    // Função para editar uma mensagem
+    function editMessage(id, nomeAtual, emailAtual, mensagemAtual) {
+        const formHTML = `
+            <form id="editForm">
+                <div class="form-group">
+                    <label for="newNome">Novo Nome:</label>
+                    <input type="text" class="form-control" id="newNome" value="${nomeAtual}" required>
+                </div>
+                <div class="form-group">
+                    <label for="newEmail">Novo Email:</label>
+                    <input type="email" class="form-control" id="newEmail" value="${emailAtual}" required>
+                </div>
+                <div class="form-group">
+                    <label for="newMensagem">Nova Mensagem:</label>
+                    <textarea class="form-control" id="newMensagem" rows="3" required>${mensagemAtual}</textarea>
+                </div>
+                <button type="submit" class="btn btn-primary">Salvar Alterações</button>
+            </form>
+        `;
+
+        const container = document.createElement('div');
+        container.innerHTML = formHTML;
+
+        const editForm = container.querySelector('#editForm');
+
+        editForm.addEventListener('submit', function (event) {
+            event.preventDefault();
+
+            const newNome = document.getElementById('newNome').value;
+            const newEmail = document.getElementById('newEmail').value;
+            const newMensagem = document.getElementById('newMensagem').value;
+
+            fetch(`/mensagens/${id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ nome: newNome, email: newEmail, mensagem: newMensagem }),
+            })
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Mensagem editada:', data);
+                    loadMessages();
+                })
+                .catch(error => console.error('Erro ao editar mensagem:', error));
+
+            // Remover o formulário após a edição
+            container.remove();
+        });
+
+        // Adicionar o formulário à página
+        document.body.appendChild(container);
+    }
+
+    // Função para excluir uma mensagem
+    function deleteMessage(id) {
+        fetch(`/mensagens/${id}`, { method: 'DELETE' })
+            .then(response => response.json())
+            .then(data => {
+                console.log('Mensagem excluída:', data);
+                loadMessages();
+            })
+            .catch(error => console.error('Erro ao excluir mensagem:', error));
+    }
+
+    // Carregar mensagens ao carregar a página
+    loadMessages();
+</script>
+
+</body>
+</html>
